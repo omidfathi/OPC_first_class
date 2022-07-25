@@ -7,7 +7,7 @@ from asyncua import Client, Node, ua
 
 import mqtt_c
 from mqtt_c import mqtt
-
+import paho.mqtt.subscribe as subscribe
 var = []
 data_dict = {}
 async def connection(url):
@@ -25,14 +25,23 @@ async def connection(url):
 
 async def mqtt_connection(url, port):
     try:
-        client_mqtt = mqtt.Client()
-        client_mqtt.reinitialise(client_id="opc_client", clean_session=True, userdata=None)
-        client_mqtt.on_connect = mqtt_c.on_connect
-        client_mqtt.connect(url, port, 60)
-        print("Mqtt Connected !!!")
+        client_mqtt = mqtt.Client("opc_client")
+        # client_mqtt.reinitialise(client_id="opc_client", clean_session=True, userdata=None)
+        # client_mqtt.on_connect = mqtt_c.on_connect
+        client_mqtt.connect(url, port)
+        print(client_mqtt)
+        print("MQTT Connected")
+        # client_mqtt.subscribe("opc_url")
+
         return client_mqtt
     except:
         print("mqtt_connection lost !!!")
+
+def onMessage(client, userdata, msg):
+
+    print(msg.topic + ": "+msg.payload.decode())
+    return msg.payload.decode()
+
 
 async def node_find(ns_node, client):
     root_id = client.get_root_node()
@@ -56,11 +65,16 @@ async def sub_rule_create(client, var):
     return data_dict
 
 async def main():
-
-    client_mqtt = await mqtt_connection("192.168.1.51", 1883)
-    time.sleep(3)
-    opc_url = str(client_mqtt.subscribe(topic="opc_url", qos=0, options=None, properties=None))
-    print(opc_url)
+    mqtt_url = "192.168.1.51"
+    client_mqtt = await mqtt_connection(mqtt_url, 1883)
+    msg = subscribe.simple(topics="opc_url", hostname=mqtt_url)
+    opc_url = str(msg.payload.decode())
+    print(type(opc_url))
+    # client_mqtt.loop_start()
+    # client_mqtt.on_message = onMessage
+    #
+    # time.sleep(1)
+    # client_mqtt.loop_stop()
     client = await connection(opc_url)
 
     async with client:
