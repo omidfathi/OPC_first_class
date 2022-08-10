@@ -1,0 +1,8 @@
+updateOPCTag_Topic: "UpdateOPCTags",
+    addOPCTag_Topic: "OPCTagAdded",
+    deleteOPCTag_Topic: "OPCtagDelete",
+    live_OPCTag_Topic: "live_OPC_tags_value",
+    opc_serverConnection_Topic: "OPC_ServersConnected",
+    opc_server_try_Connection_Topic: "OPC_Servers_Try_Connection",
+    send_opc_tag_topic:"send_opc_tag"
+    ready_to_Recieve_opc_topic:"ready_to_Recieve_opc_topic"

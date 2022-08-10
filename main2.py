@@ -11,6 +11,11 @@ _logger = logging.getLogger('asyncua')
 var = []
 data_dict = {}
 data_send = True
+client_mqtt = mqtt.Client("opc_Socket")
+mqtt_url = '192.168.1.51'
+topic = 'send_opc_tag'
+
+
 class SubscriptionHandler:
 
     def event_notification(self, event):
@@ -55,13 +60,28 @@ def mqtt_sub(mqtt_url, topic):
 
     except:
         print("error")
-def on_connect(client, userdata, flags, rc):
-    print("Connected to a broker!")
 
-def on_message(client, userdata, message):
-    msg = message.payload.decode()
-    print(msg)
-    return msg
+def on_log(client, userdata, level, buff):  # mqtt logs function
+    print(buff)
+
+
+def on_connect(client, userdata, flags, rc):  # connect to mqtt broker function
+    if rc == 0:
+        client.connected_flag = True  # set flags
+        print("Connected Info")
+    else:
+        print("Bad connection returned code = " + str(rc))
+        client.loop_stop()
+
+def on_subscribe(client, userdata, mid, granted_qos):  # subscribe to mqtt broker
+    print("Subscribed", userdata)
+
+def on_publish(client, userdata, mid):  # publish to mqtt broker
+    print("In on_pub callback mid=" + str(mid))
+
+
+def on_message(client, userdata, message):  # get message from mqtt broker
+    print("New message received: ", str(message.payload.decode("utf-8")), "Topic : %s ", message.topic, "Retained : %s", message.retain)
 
 def onMessage(client, userdata, msg):
 
@@ -88,25 +108,36 @@ async def sub_rule_create(var):
     await asyncio.sleep(1)
     return data_dict
 
-async def main():
-    mqtt_url = '192.168.1.51'
-    topic = 'OPC_Servers_Try_Connection'
-    client_mqtt = mqtt.Client("OPC_TEST")
+def connectToMqtt(client=None):  # connect to MQTT broker main function
+    print("Connecting to MQTT broker")
+    client_mqtt.on_log = on_log
     client_mqtt.on_connect = on_connect
-    client_mqtt.connect(mqtt_url, 1883)
-    client_mqtt.publish("ready_to_Recieve_opc_topic", "")
-    msg = client_mqtt.subscribe(topic)
-    client_mqtt.on_message = on_message
-    print(client_mqtt)
+    client_mqtt.on_publish = on_publish
+    client_mqtt.on_subscribe = on_subscribe
+    client_mqtt.connect("192.168.1.51", 1883, keepalive=600)
+    rec = client_mqtt.publish(topic="ready_to_Recieve_opc_topic",qos=0,payload="")
+    print("Published = "+ str(rec))
+    ret = client_mqtt.subscribe(topic, qos=0)
+    for i in ret:
+        print(i)
+    print("Subscribed return = " + str(ret))
+    msg = client_mqtt.subscribe_callback()
     print(msg)
-    client_mqtt.loop_forever()
 
-    # client_mqtt.loop_start()
+    client_mqtt.on_message = on_message
+
+
+async def main():
+
+    connectToMqtt()
+    # client_mqtt.loop_forever()
+
+    client_mqtt.loop_start()
     # client_mqtt.on_message = onMessage
     #
     # time.sleep(1)
     # client_mqtt.loop_stop()
-    client = await connection(msg)
+    client = await connection()
     if client == "error":
         client_mqtt.publish(topic="OPC_ServersConnected", payload=str(msg), qos=0, retain=False, properties=None)
     else:
